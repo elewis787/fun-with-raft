@@ -13,3 +13,33 @@
 [submodule "vendor/github.com/coreos/etcd"]
 	path = vendor/github.com/coreos/etcd
 	url = https://github.com/coreos/etcd
+[submodule "vendor/github.com/coreos/pkg"]
+	path = vendor/github.com/coreos/pkg
+	url = https://github.com/coreos/pkg
+[submodule "vendor/github.com/gogo/protobuf"]
+	path = vendor/github.com/gogo/protobuf
+	url = https://github.com/gogo/protobuf
+[submodule "vendor/github.com/golang/protobuf"]
+	path = vendor/github.com/golang/protobuf
+	url = https://github.com/golang/protobuf/
+[submodule "vendor/github.com/coreos/go-systemd"]
+	path = vendor/github.com/coreos/go-systemd
+	url = https://github.com/coreos/go-systemd/
+[submodule "vendor/github.com/prometheus/client_golang"]
+	path = vendor/github.com/prometheus/client_golang
+	url = https://github.com/prometheus/client_golang
+[submodule "vendor/github.com/beorn7/perks"]
+	path = vendor/github.com/beorn7/perks
+	url = https://github.com/beorn7/perks
+[submodule "vendor/github.com/prometheus/procfs"]
+	path = vendor/github.com/prometheus/procfs
+	url = https://github.com/prometheus/procfs
+[submodule "vendor/github.com/prometheus/client_model"]
+	path = vendor/github.com/prometheus/client_model
+	url = https://github.com/prometheus/client_model
+[submodule "vendor/github.com/prometheus/common"]
+	path = vendor/github.com/prometheus/common
+	url = https://github.com/prometheus/common
+[submodule "vendor/github.com/matttproud/golang_protobuf_extensions"]
+	path = vendor/github.com/matttproud/golang_protobuf_extensions
+	url = https://github.com/matttproud/golang_protobuf_extensions

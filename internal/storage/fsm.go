@@ -27,7 +27,7 @@ type kv struct {
 // Lookup - return a value if found
 func (fsm *FiniteStateMachine) Lookup(key string) (string, bool) {
 	fsm.rwMutex.RLock()
-	v, ok := s.kvStore[key]
+	v, ok := fsm.kvStore[key]
 	fsm.rwMutex.RUnlock()
 	return v, ok
 }
@@ -36,17 +36,50 @@ func (fsm *FiniteStateMachine) Lookup(key string) (string, bool) {
 func (fsm *FiniteStateMachine) Propose(key string, value string) {
 	var buf bytes.Buffer
 	// TODO replace with proto
-	if err := gob.NewEncoder(&buf).Encode(kv{k, v}); err != nil {
+	if err := gob.NewEncoder(&buf).Encode(kv{key, value}); err != nil {
 		log.Fatal(err)
 	}
 	fsm.propose <- buf.String()
 }
 
-// return the json bytes of the internal map
-func (fsm *FiniteStateMachine) getKVStore() ([]byte, error) {
+func (fsm *FiniteStateMachine) readCommits(commitC <-chan *string, errorC <-chan error) {
+	for data := range commitC {
+		if data == nil {
+			// done replaying log; new data incoming
+			// OR signaled to load snapshot
+			snapshot, err := fsm.snapShotter.Load()
+			if err == snap.ErrNoSnapshot {
+				return
+			}
+			if err != nil && err != snap.ErrNoSnapshot {
+				log.Panic(err)
+			}
+			log.Printf("loading snapshot at term %d and index %d", snapshot.Metadata.Term, snapshot.Metadata.Index)
+			if err := fsm.recoverFromSnapshot(snapshot.Data); err != nil {
+				log.Panic(err)
+			}
+			continue
+		}
+
+		var dataKv kv
+		dec := gob.NewDecoder(bytes.NewBufferString(*data))
+		if err := dec.Decode(&dataKv); err != nil {
+			log.Fatalf("raftexample: could not decode message (%v)", err)
+		}
+		fsm.rwMutex.Lock()
+		fsm.kvStore[dataKv.Key] = dataKv.Val
+		fsm.rwMutex.Unlock()
+	}
+	if err, ok := <-errorC; ok {
+		log.Fatal(err)
+	}
+}
+
+// GetKVStore return the json bytes of the internal map
+func (fsm *FiniteStateMachine) GetKVStore() ([]byte, error) {
 	fsm.rwMutex.Lock()
 	defer fsm.rwMutex.Unlock()
-	return json.Marshal(s.kvStore)
+	return json.Marshal(fsm.kvStore)
 }
 
 // load snapshot into map
