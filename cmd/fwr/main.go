@@ -12,14 +12,14 @@ func main() {
 	// Init the urfave cli app
 	app := cli.NewApp()
 	app.Name = "fwr"
-	app.Usage = "Fun-with-raft... playing around with the raft consensus alg."
+	app.Usage = "Fun-with-raft ... playing around with the raft consensus alg."
 	app.Version = "v0.0.0" // major,minor,patch
 	app.Flags = []cli.Flag{}
 	app.Commands = []cli.Command{}
 	// ------- Main Application function -------
 	app.Action = func(cliCTX *cli.Context) error {
 		// Init zap logger
-		zlogger, err := zap.NewDevelopment() // TODO this needs to be configured for production
+		zlogger, err := zap.NewDevelopment()
 		if err != nil {
 			return err
 		}
