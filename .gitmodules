@@ -1,0 +1,12 @@
+[submodule "vendor/github.com/urfave/cli"]
+	path = vendor/github.com/urfave/cli
+	url = https://github.com/urfave/cli
+[submodule "vendor/go.uber.org/multierr"]
+	path = vendor/go.uber.org/multierr
+	url = https://github.com/uber-go/multierr
+[submodule "vendor/go.uber.org/atomic"]
+	path = vendor/go.uber.org/atomic
+	url = https://github.com/uber-go/atomic
+[submodule "vendor/go.uber.org/zap"]
+	path = vendor/go.uber.org/zap
+	url = https://github.com/uber-go/zap
