@@ -12,7 +12,7 @@ import (
 type RaftNode struct {
 	propose      <-chan string            // read only channel of proposed messages (k,v)
 	configChange <-chan raftpb.ConfChange // proposed cluster config changes
-	commit       chan<- string            // entries commited to log (k,v)
+	commit       chan<- *string           // entries commited to log (k,v)
 	errors       chan<- error             // errors from raft session
 
 	id           int      // client ID for raft session
