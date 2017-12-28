@@ -43,3 +43,9 @@
 [submodule "vendor/github.com/matttproud/golang_protobuf_extensions"]
 	path = vendor/github.com/matttproud/golang_protobuf_extensions
 	url = https://github.com/matttproud/golang_protobuf_extensions
+[submodule "vendor/github.com/xiang90/probing"]
+	path = vendor/github.com/xiang90/probing
+	url = https://github.com/xiang90/probing
+[submodule "vendor/github.com/coreos/go-semver"]
+	path = vendor/github.com/coreos/go-semver
+	url = https://github.com/coreos/go-semver/
