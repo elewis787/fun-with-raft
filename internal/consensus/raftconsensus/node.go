@@ -8,8 +8,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/coreos/etcd/etcdserver/stats"
+	"github.com/coreos/etcd/pkg/fileutil"
 	"github.com/coreos/etcd/pkg/types"
 	"github.com/coreos/etcd/raft"
 	"github.com/coreos/etcd/raft/raftpb"
@@ -33,6 +36,7 @@ type RaftNode struct {
 	peers        []string // raft peer urls
 	join         bool     // node is joining an existing cluster
 	walDir       string   // path to the write ahead log directory
+	snapDir      string   // path to snapshot directory
 	snapshotFunc func() ([]byte, error)
 	lastIndex    uint64 // index of log at start
 
@@ -53,6 +57,62 @@ type RaftNode struct {
 	stopc     chan struct{} // signals proposal channel closed
 	httpstopc chan struct{} // signals http server to shutdown
 	httpdonec chan struct{} // signals http server shutdown complete
+}
+
+// StartRaftNode - starts the raft server and listeners on channels
+func (rn *RaftNode) StartRaftNode() {
+	if !fileutil.Exist(rn.snapDir) {
+		if err := os.Mkdir(rn.snapDir, 0750); err != nil {
+			log.Fatalf("raftexample: cannot create dir for snapshot (%v)", err)
+		}
+	}
+	rn.snapshotter = snap.New(rn.snapDir)
+	rn.snapShotterReady <- rn.snapshotter
+
+	oldwal := wal.Exist(rn.walDir)
+	rn.writeAheadLog = rn.replayWAL()
+
+	rpeers := make([]raft.Peer, len(rn.peers))
+	for i := range rpeers {
+		rpeers[i] = raft.Peer{ID: uint64(i + 1)}
+	}
+	c := &raft.Config{
+		ID:              uint64(rn.id),
+		ElectionTick:    10,
+		HeartbeatTick:   1,
+		Storage:         rn.storage,
+		MaxSizePerMsg:   1024 * 1024,
+		MaxInflightMsgs: 256,
+	}
+
+	if oldwal {
+		rn.node = raft.RestartNode(c)
+	} else {
+		startPeers := rpeers
+		if rn.join {
+			startPeers = nil
+		}
+		rn.node = raft.StartNode(c, startPeers)
+	}
+
+	rn.transport = &rafthttp.Transport{
+		ID:          types.ID(rn.id),
+		ClusterID:   0x1000,
+		Raft:        rn,
+		ServerStats: stats.NewServerStats("", ""),
+		LeaderStats: stats.NewLeaderStats(strconv.Itoa(rn.id)),
+		ErrorC:      make(chan error),
+	}
+
+	rn.transport.Start()
+	for i := range rn.peers {
+		if i+1 != rn.id {
+			rn.transport.AddPeer(types.ID(i+1), []string{rn.peers[i]})
+		}
+	}
+
+	go rn.serveRaft()
+	go rn.serveChannels()
 }
 
 // Process -
