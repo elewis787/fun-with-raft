@@ -29,6 +29,5 @@ fwr --id 3 --cluster http://127.0.0.1:12379,http://127.0.0.1:22379,http://127.0.
 
 
 ### More info 
-
-[raft]: http://raftconsensus.github.io/
+ http://raftconsensus.github.io/
  
