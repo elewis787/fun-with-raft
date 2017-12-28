@@ -3,6 +3,7 @@ package raftconsensus
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -57,6 +58,39 @@ type RaftNode struct {
 	stopc     chan struct{} // signals proposal channel closed
 	httpstopc chan struct{} // signals http server to shutdown
 	httpdonec chan struct{} // signals http server shutdown complete
+}
+
+// NewRaftNode initiates a raft instance and returns a committed log entry
+// channel and error channel. Proposals for log updates are sent over the
+// provided the proposal channel. All log entries are replayed over the
+// commit channel, followed by a nil message (to indicate the channel is
+// current), then new log entries. To shutdown, close proposeC and read errorC.
+func NewRaftNode(id int, peers []string, join bool, getSnapshot func() ([]byte, error), proposeC <-chan string,
+	confChangeC <-chan raftpb.ConfChange) (<-chan *string, <-chan error, <-chan *snap.Snapshotter) {
+
+	commits := make(chan *string)
+	errors := make(chan error)
+
+	rc := &RaftNode{
+		propose:          proposeC,
+		configChange:     confChangeC,
+		commits:          commits,
+		errors:           errors,
+		id:               id,
+		peers:            peers,
+		join:             join,
+		walDir:           fmt.Sprintf("raftexample-%d", id),
+		snapDir:          fmt.Sprintf("raftexample-%d-snap", id),
+		snapshotFunc:     getSnapshot,
+		snapCount:        defaultSnapCount,
+		stopc:            make(chan struct{}),
+		httpstopc:        make(chan struct{}),
+		httpdonec:        make(chan struct{}),
+		snapShotterReady: make(chan *snap.Snapshotter, 1),
+		// rest of structure populated after WAL replay
+	}
+	//go rc.startRaft()
+	return commits, errors, rc.snapShotterReady
 }
 
 // StartRaftNode - starts the raft server and listeners on channels
