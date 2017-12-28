@@ -291,6 +291,82 @@ func (rn *RaftNode) maybeTriggerSnapshot() {
 	rn.snapshotIndex = rn.appliedIndex
 }
 
+func (rn *RaftNode) serveChannels() {
+	snap, err := rn.storage.Snapshot()
+	if err != nil {
+		panic(err)
+	}
+	rn.confState = snap.Metadata.ConfState
+	rn.snapshotIndex = snap.Metadata.Index
+	rn.appliedIndex = snap.Metadata.Index
+	defer rn.writeAheadLog.Close()
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	// send proposals over raft
+	go func() {
+		var confChangeCount uint64
+
+		for rn.propose != nil && rn.configChange != nil {
+			select {
+			case prop, ok := <-rn.propose:
+				if !ok {
+					rn.propose = nil
+				} else {
+					// blocks until accepted by raft state machine
+					rn.node.Propose(context.TODO(), []byte(prop))
+				}
+
+			case cc, ok := <-rn.configChange:
+				if !ok {
+					rn.configChange = nil
+				} else {
+					confChangeCount++
+					cc.ID = confChangeCount
+					rn.node.ProposeConfChange(context.TODO(), cc)
+				}
+			}
+		}
+		// client closed channel; shutdown raft if not already
+		close(rn.stopc)
+	}()
+
+	// event loop on raft state machine updates
+	for {
+		select {
+		case <-ticker.C:
+			rn.node.Tick()
+
+		// store raft entries to wal, then publish over commit channel
+		case rd := <-rn.node.Ready():
+			rn.writeAheadLog.Save(rd.HardState, rd.Entries)
+			if !raft.IsEmptySnap(rd.Snapshot) {
+				rn.saveSnap(rd.Snapshot)
+				rn.storage.ApplySnapshot(rd.Snapshot)
+				rn.publishSnapshot(rd.Snapshot)
+			}
+			rn.storage.Append(rd.Entries)
+			rn.transport.Send(rd.Messages)
+			if ok := rn.publishEntries(rn.entriesToApply(rd.CommittedEntries)); !ok {
+				rn.stop()
+				return
+			}
+			rn.maybeTriggerSnapshot()
+			rn.node.Advance()
+
+		case err := <-rn.transport.ErrorC:
+			rn.writeError(err)
+			return
+
+		case <-rn.stopc:
+			rn.stop()
+			return
+		}
+	}
+
+}
+
 func (rn *RaftNode) serveRaft() {
 	url, err := url.Parse(rn.peers[rn.id-1])
 	if err != nil {
