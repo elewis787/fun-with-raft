@@ -28,4 +28,7 @@ fwr --id 3 --cluster http://127.0.0.1:12379,http://127.0.0.1:22379,http://127.0.
 `fwr --id 4 --cluster http://127.0.0.1:12379,http://127.0.0.1:22379,http://127.0.0.1:32379,http://127.0.0.1:42379 --port 42380 --join` 
 
 
+### More info 
+
+[raft]: http://raftconsensus.github.io/
  
