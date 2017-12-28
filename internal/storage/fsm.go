@@ -25,20 +25,13 @@ type kv struct {
 }
 
 // NewFSM return and initalized FSM
-func NewFSM(snapShotter *snap.Snapshotter, propose chan<- string, commits <-chan *string, errors <-chan error) *FiniteStateMachine {
+func NewFSM(snapShotter *snap.Snapshotter, propose chan<- string) *FiniteStateMachine {
 	// init fsm object
-	fsm := &FiniteStateMachine{
+	return &FiniteStateMachine{
 		propose:     propose,
 		kvStore:     make(map[string]string),
 		snapShotter: snapShotter,
 	}
-	// TODO move to main
-	// replay log into k,v map
-	fsm.ReadCommits(commits, errors)
-	// read commits from raft into k,v map until error
-	go fsm.ReadCommits(commits, errors)
-
-	return fsm
 }
 
 // Lookup - return a value if found
@@ -61,6 +54,7 @@ func (fsm *FiniteStateMachine) Propose(key string, value string) {
 
 // ReadCommits - read from snapshot or channel until there is an error
 func (fsm *FiniteStateMachine) ReadCommits(commits <-chan *string, errors <-chan error) {
+	log.Println("reading commits")
 	for data := range commits {
 		if data == nil {
 			// done replaying log; new data incoming
@@ -91,6 +85,7 @@ func (fsm *FiniteStateMachine) ReadCommits(commits <-chan *string, errors <-chan
 	if err, ok := <-errors; ok {
 		log.Fatal(err)
 	}
+	log.Println("done reading commits")
 }
 
 // GetKVStore return the json bytes of the internal map

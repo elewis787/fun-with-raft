@@ -89,7 +89,7 @@ func NewRaftNode(id int, peers []string, join bool, getSnapshot func() ([]byte, 
 		snapShotterReady: make(chan *snap.Snapshotter, 1),
 		// rest of structure populated after WAL replay
 	}
-	//go rc.startRaft()
+	go rc.StartRaftNode()
 	return commits, errors, rc.snapShotterReady
 }
 
